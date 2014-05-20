@@ -429,7 +429,8 @@ ngx_http_init_phases(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
     return NGX_OK;
 }
 
-
+/* 将定义在ngx_http_request.c 中的全局变量ngx_http_headers_in 数组进行hash 处理
+ */
 static ngx_int_t
 ngx_http_init_headers_in_hash(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
 {
