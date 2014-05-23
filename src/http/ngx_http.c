@@ -485,6 +485,11 @@ ngx_http_init_phase_handlers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
     cmcf->phase_engine.server_rewrite_index = (ngx_uint_t) -1;
     cmcf->phase_engine.location_rewrite_index = (ngx_uint_t) -1;
     find_config_index = 0;
+
+    /* 首先确认NGX_HTTP_REWRITE_PHASE 和 NGX_HTTP_ACCESS_PAHSE 这两个阶段 
+     * 是否有挂载点(配置文件中配置了，就肯定会有)。若有，不管有多少，会通过
+     * use_rewrite 标记有rewrite ， use_access 标记有 access(权限限制)
+     */
     use_rewrite = cmcf->phases[NGX_HTTP_REWRITE_PHASE].handlers.nelts ? 1 : 0;
     use_access = cmcf->phases[NGX_HTTP_ACCESS_PHASE].handlers.nelts ? 1 : 0;
 
@@ -516,6 +521,7 @@ ngx_http_init_phase_handlers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf)
 
             break;
 
+	// 根据url定位location
         case NGX_HTTP_FIND_CONFIG_PHASE:
             find_config_index = n;
 
