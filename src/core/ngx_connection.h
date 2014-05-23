@@ -23,7 +23,7 @@ struct ngx_listening_s {
     size_t              addr_text_max_len;
     ngx_str_t           addr_text;
 
-    int                 type;
+    int                 type;  /* 协议类型 TCP 或者UDP */
 
     int                 backlog;
     int                 rcvbuf;	/* 接收缓冲区 */  

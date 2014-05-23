@@ -15,7 +15,9 @@ ngx_os_io_t  ngx_io;
 
 static void ngx_drain_connections(void);
 
-
+/*从 cycle->listening 数组中push 一个元素(ngx_listening_s),对这个元素进行socket 等
+ *一系列初始化工作
+ */
 ngx_listening_t *
 ngx_create_listening(ngx_conf_t *cf, void *sockaddr, socklen_t socklen)
 {
@@ -110,6 +112,9 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
         }
 
         ls[i].socklen = NGX_SOCKADDRLEN;
+
+	// 根据 NGINX="111:222:333" 这个环境变量中指定的SOCKET 的FD 获取对应的sockaddr 
+	// 若NGINX这个变量是伪造的，这一步肯定会出错的
         if (getsockname(ls[i].fd, ls[i].sockaddr, &ls[i].socklen) == -1) {
             ngx_log_error(NGX_LOG_CRIT, cycle->log, ngx_socket_errno,
                           "getsockname() of the inherited "
@@ -265,6 +270,10 @@ ngx_set_inherited_sockets(ngx_cycle_t *cycle)
 }
 
 
+/* nginx 的 socket -> bind -> listen 的过程
+ * 若相应的端口被占用了, nginx本身的逻辑为重试5此，每次间隔500ms
+ * 这个重试次数和间隔时间是硬编码，配置上无法更改
+ */
 ngx_int_t
 ngx_open_listening_sockets(ngx_cycle_t *cycle)
 {
@@ -464,6 +473,12 @@ ngx_open_listening_sockets(ngx_cycle_t *cycle)
 }
 
 
+/*  通过 ngx_open_listening_sockets 函数创建了SOCKET 之后，
+ *  通过本函数对这些SOCKET 的 backlog、SO_RCVBUF、SO_SNDBUF 等
+ *  一些SOCKET特性，通过setsockopt 函数进行设置.
+ *  当然，这些backlog 、SO_RCVBUF、SO_SNDBUF 要不获取默认值
+ *   要不从配置文集中读取
+ */
 void
 ngx_configure_listening_sockets(ngx_cycle_t *cycle)
 {
@@ -782,6 +797,9 @@ ngx_get_connection(ngx_socket_t s, ngx_log_t *log)
 }
 
 
+/* 将不使用的connection 挂载到free_connections 链表的头部
+ * 并将free_connection_n 加 1
+ */
 void
 ngx_free_connection(ngx_connection_t *c)
 {
@@ -916,7 +934,9 @@ ngx_close_connection(ngx_connection_t *c)
     }
 }
 
-
+/* reusable 设置为 0 , 那么这个链接将不可重用
+ * reusable 设置为 1 ，那么这个链接是可以被重复使用的
+ */
 void
 ngx_reusable_connection(ngx_connection_t *c, ngx_uint_t reusable)
 {
@@ -937,7 +957,10 @@ ngx_reusable_connection(ngx_connection_t *c, ngx_uint_t reusable)
     }
 }
 
-
+/*判断reusable_connections_queue 队列中是否有元素
+ *若有，至多执行32次从队尾去的操作.
+ *并对没一次取出来的数据(数据是一个connection) 处理上面的读操作
+ */
 static void
 ngx_drain_connections(void)
 {
@@ -961,7 +984,8 @@ ngx_drain_connections(void)
     }
 }
 
-
+/* 将listening 中的sockaddr 赋值给local_sockaddr
+*/
 ngx_int_t
 ngx_connection_local_sockaddr(ngx_connection_t *c, ngx_str_t *s,
     ngx_uint_t port)
