@@ -67,6 +67,9 @@ void ngx_strlow(u_char *dst, u_char *src, size_t n);
 
 #define ngx_strchr(s1, c)   strchr((const char *) s1, (int) c)
 
+/* 在p 和 last 之间的内存中查找字符 c 
+ * 若找到，则返回c的位置， 若没有找到，则返回NULL
+ */
 static ngx_inline u_char *
 ngx_strlchr(u_char *p, u_char *last, u_char c)
 {
