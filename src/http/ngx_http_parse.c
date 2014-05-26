@@ -131,6 +131,7 @@ ngx_http_parse_request_line(ngx_http_request_t *r, ngx_buf_t *b)
         sw_almost_done
     } state;
 
+    // 解析request line 的初始状态
     state = r->state;
 
     for (p = b->pos; p < b->last; p++) {
@@ -154,10 +155,15 @@ ngx_http_parse_request_line(ngx_http_request_t *r, ngx_buf_t *b)
             break;
 
         case sw_method:
+	    // 根据request line 的格式 METHOD URL
+	    // 如果再次读到空格则说明我们已经准备解析request-URL，此时我们就能得到请求方法了
             if (ch == ' ') {
+		// 先得到method的结束位置
                 r->method_end = p - 1;
+		// method 的开始位置
                 m = r->request_start;
 
+		// 得到方法的长度，通过长度来得到具体不同的方法，然后给request的method赋值
                 switch (p - m) {
 
                 case 3:
@@ -273,12 +279,14 @@ ngx_http_parse_request_line(ngx_http_request_t *r, ngx_buf_t *b)
         /* space* before URI */
         case sw_spaces_before_uri:
 
+	    // 若ch 以 / 开头( 即url 中以 / 开头)，则进入sw_after_slash_in_uri
             if (ch == '/') {
                 r->uri_start = p;
                 state = sw_after_slash_in_uri;
                 break;
             }
 
+	    // 若ch 以小写字母开头(即url 以http开头)，则进入 sw_schema
             c = (u_char) (ch | 0x20);
             if (c >= 'a' && c <= 'z') {
                 r->schema_start = p;
@@ -287,6 +295,7 @@ ngx_http_parse_request_line(ngx_http_request_t *r, ngx_buf_t *b)
             }
 
             switch (ch) {
+	   // ch 以空格开头，则在sw_spaces_before_uri 这个阶段继续循环
             case ' ':
                 break;
             default:
@@ -302,7 +311,9 @@ ngx_http_parse_request_line(ngx_http_request_t *r, ngx_buf_t *b)
             }
 
             switch (ch) {
+	   // 解析到了如http:// 中的: 号的时候
             case ':':
+		// 记录 http 的结束位置
                 r->schema_end = p;
                 state = sw_schema_slash;
                 break;
@@ -310,7 +321,7 @@ ngx_http_parse_request_line(ngx_http_request_t *r, ngx_buf_t *b)
                 return NGX_HTTP_PARSE_INVALID_REQUEST;
             }
             break;
-
+        // 解析到http:// 中的第一个斜杠(/) 的位置
         case sw_schema_slash:
             switch (ch) {
             case '/':
@@ -320,10 +331,11 @@ ngx_http_parse_request_line(ngx_http_request_t *r, ngx_buf_t *b)
                 return NGX_HTTP_PARSE_INVALID_REQUEST;
             }
             break;
-
+	// 解析到 http:// 中第二个斜杠(/)的位置
         case sw_schema_slash_slash:
             switch (ch) {
             case '/':
+		// 记录如 http://weibo.com 中 weibo.com 的开始位置
                 r->host_start = p + 1;
                 state = sw_host;
                 break;
@@ -343,16 +355,20 @@ ngx_http_parse_request_line(ngx_http_request_t *r, ngx_buf_t *b)
                 break;
             }
 
+	    // 记录host结束位置
             r->host_end = p;
 
             switch (ch) {
+	    // 记录 如 http://weibo.com:8888 中的冒号(:),此时状态变为sw_port
             case ':':
                 state = sw_port;
                 break;
+            // 记录 如 http://weibo.com/abc 中的第三个斜线(/) ，此时状态转换为sw_after_slabs_in_uri
             case '/':
                 r->uri_start = p;
                 state = sw_after_slash_in_uri;
                 break;
+	    //不是很理解
             case ' ':
                 /*
                  * use single "/" from request line to preserve pointers,
@@ -373,6 +389,7 @@ ngx_http_parse_request_line(ngx_http_request_t *r, ngx_buf_t *b)
             }
 
             switch (ch) {
+            // 记录port 的结束位置，uri 的开始位置
             case '/':
                 r->port_end = p;
                 r->uri_start = p;
@@ -1712,7 +1729,7 @@ ngx_http_arg(ngx_http_request_t *r, u_char *name, size_t len, ngx_str_t *value)
     return NGX_DECLINED;
 }
 
-
+// 将url 同 args 拆开，分别url->data、url->len 和 args->data 、args->len
 void
 ngx_http_split_args(ngx_http_request_t *r, ngx_str_t *uri, ngx_str_t *args)
 {
@@ -1720,6 +1737,7 @@ ngx_http_split_args(ngx_http_request_t *r, ngx_str_t *uri, ngx_str_t *args)
 
     last = uri->data + uri->len;
 
+    // 返回 ? 在 uri->data 到 last 这么大内存之间的位置
     p = ngx_strlchr(uri->data, last, '?');
 
     if (p) {
