@@ -708,7 +708,9 @@ ngx_strcasestrn(u_char *s1, char *s2, size_t n)
  * with known length in string until the argument last. The argument n
  * must be length of the second substring - 1.
  */
-
+/* 在s1 到 last 这个字符串中寻找子字符串s2, 若找到则返回 s2 中第一个字母在
+ * s1 到 last 这个字符串中的位置。其中n 为 s2 的长度减去 1 (去掉s2中的回车换行吧)
+ */
 u_char *
 ngx_strlcasestrn(u_char *s1, u_char *last, u_char *s2, size_t n)
 {
@@ -720,6 +722,8 @@ ngx_strlcasestrn(u_char *s1, u_char *last, u_char *s2, size_t n)
 
     do {
         do {
+	    // last 在上面已经做了 last -n 的操作，
+	    // 此时，若 s1 >= last 则说明 s1 到 last 的距离小于s2的长度
             if (s1 >= last) {
                 return NULL;
             }
@@ -732,6 +736,7 @@ ngx_strlcasestrn(u_char *s1, u_char *last, u_char *s2, size_t n)
 
     } while (ngx_strncasecmp(s1, s2, n) != 0);
 
+    // 上面作了 s1++ ，--s1 相对于还原到上一个位置
     return --s1;
 }
 
